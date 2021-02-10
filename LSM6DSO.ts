@@ -9,19 +9,19 @@
  */
 //% weight=100 color=#505060 icon="\uf206" block="LSM6DSO"
 namespace LSM6DSO {
-    const LSM6DSO_CTRL1_XL = 0x10
-    const LSM6DSO_CTRL2_G = 0x11
+    const LSM6DSO_CTRL1_XL = 0x1B // GYRO_CONFIG
+    const LSM6DSO_CTRL2_G = 0x1C // ACCEL_CONFIG
     const LSM6DSO_CTRL3_C = 0x12
     const LSM6DSO_CTRL6_C = 0x15
     const LSM6DSO_CTRL8_XL = 0x17
-    const LSM6DSO_STATUS = 0x1E
-    const LSM6DSO_OUT_TEMP_L = 0x20
-    const LSM6DSO_OUTX_L_G = 0x22
-    const LSM6DSO_OUTY_L_G = 0x24
-    const LSM6DSO_OUTZ_L_G = 0x26
-    const LSM6DSO_OUTX_L_A = 0x28
-    const LSM6DSO_OUTY_L_A = 0x2A
-    const LSM6DSO_OUTZ_L_A = 0x2C
+    const LSM6DSO_STATUS = 0x3A
+    const LSM6DSO_OUT_TEMP_L = 0x41
+    const LSM6DSO_OUTX_L_G = 0x43
+    const LSM6DSO_OUTY_L_G = 0x45
+    const LSM6DSO_OUTZ_L_G = 0x47
+    const LSM6DSO_OUTX_L_A = 0x3B
+    const LSM6DSO_OUTY_L_A = 0x3D
+    const LSM6DSO_OUTZ_L_A = 0x3F
 
     export enum AccelerometerRange {
         //% block="2g"
@@ -33,21 +33,19 @@ namespace LSM6DSO {
         //% block="16g"
         range_16g = 3
     }
-    const range_a_v = [0, 2, 3, 1]
+    const range_a_v = [0, 1, 2, 3]
 
     export enum AngularmeterRange {
-        //% block="125"
-        range_125dps = 0,
         //% block="250"
-        range_250dps = 1,
+        range_250dps = 0,
         //% block="500"
-        range_500dps = 2,
+        range_500dps = 1,
         //% block="1000"
-        range_1000dps = 3,
+        range_1000dps = 2,
         //% block="2000"
-        range_2000dps = 4
+        range_2000dps = 3
     }
-    const range_g_v = [1, 0, 2, 4, 6]
+    const range_g_v = [0, 1, 2, 3]
 
     export enum POWER_ONOFF {
         //% block="ON"
@@ -58,9 +56,9 @@ namespace LSM6DSO {
 
     export enum LSM6DSO_I2C_ADDRESS {
         //% block="106"
-        ADDR_106 = 106,
+        ADDR_106 = 104,
         //% block="107"
-        ADDR_107 = 107
+        ADDR_107 = 105
     }
 
     export enum Dimension {
@@ -81,15 +79,17 @@ namespace LSM6DSO {
         F = 1
     }
 
-    let I2C_ADDR = LSM6DSO_I2C_ADDRESS.ADDR_107
+    let I2C_ADDR = LSM6DSO_I2C_ADDRESS.ADDR_106
 
-    // ODR_XL = 4 FS_XL= 0
-    setreg(LSM6DSO_CTRL1_XL, 0x40)
-    // ODR_G = 4 FS_125= 1
-    setreg(LSM6DSO_CTRL2_G, 0x42)
-    // BDU = 1 IF_INC= 1
-    setreg(LSM6DSO_CTRL3_C, 0x44)
-    setreg(LSM6DSO_CTRL8_XL, 0)
+    setreg(0x6B, 0x00)  // PWR_MGMT
+    control.waitMicros(100000);
+    setreg(0x6B, 0x01)
+    setreg(0x1A, 0x03)  // CONFIG
+    setreg(0x19, 0x04)  // SMPLRT_DIV
+    setreg(0x37, 0x22) // INT_PIN_CFG
+    setreg(0x38, 0x01) // INT_ENABLE
+    
+    
     // scale = 2G
     let _range_a = 0
     let _range_g = 0
@@ -192,8 +192,8 @@ namespace LSM6DSO {
     export function power(on: LSM6DSO.POWER_ONOFF = LSM6DSO.POWER_ONOFF.ON) {
         let a = (on) ? 0x40 : 0x00
         let g = (on) ? 0x40 : 0x00
-        setreg_mask(LSM6DSO_CTRL1_XL, a, 0x0F)
-        setreg_mask(LSM6DSO_CTRL2_G, g, 0x0F)
+        //setreg_mask(LSM6DSO_CTRL1_XL, a, 0x0F)
+        //setreg_mask(LSM6DSO_CTRL2_G, g, 0x0F)
     }
 
     /**
@@ -202,7 +202,7 @@ namespace LSM6DSO {
     //% block="setAccelerometerRange (g) %range"
     export function setAccelerometerRange(range: LSM6DSO.AccelerometerRange = LSM6DSO.AccelerometerRange.range_2g) {
         _range_a = range
-        setreg_mask(LSM6DSO_CTRL1_XL, range_a_v[range] << 2, 0xF3)
+        setreg_mask(LSM6DSO_CTRL1_XL, range_a_v[range] << 3, 0xF8)
     }
 
     /**
@@ -211,7 +211,7 @@ namespace LSM6DSO {
     //% block="setAngularmeterRange (dps) %range"
     export function setAngularmeterRange(range: LSM6DSO.AngularmeterRange = LSM6DSO.AngularmeterRange.range_125dps) {
         _range_g = range
-        setreg_mask(LSM6DSO_CTRL2_G, range_g_v[range] << 1, 0xF1)
+        setreg_mask(LSM6DSO_CTRL2_G, range_g_v[range] << 3, 0xF8)
     }
 
     /**
